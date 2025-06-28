@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Football Analytics Processor</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+
+        video {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        input[type="file"],
+        button {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Football Video Processor</h2>
+        <input type="file" id="videoInput" accept="video/*">
+        <video id="videoPreview" controls></video>
+        <button onclick="uploadVideo()">Process & Download</button>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const videoPreview = document.getElementById('videoPreview');
+        const statusText = document.getElementById('status');
+
+        videoInput.addEventListener('change', () => {
+            const file = videoInput.files[0];
+            if (file) {
+                videoPreview.src = URL.createObjectURL(file);
+            }
+        });
+
+        async function uploadVideo() {
+            const file = videoInput.files[0];
+            if (!file) {
+                alert("Please select a video first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('video', file);
+
+            statusText.textContent = "Processing video...";
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    statusText.textContent = "Error: " + errorData.message;
+                    return;
+                }
+
+                const blob = await response.blob();
+                console.log('Blob size:', blob.size, 'Blob type:', blob.type);
+
+                if (blob.size === 0) {
+                    statusText.textContent = "Error: Received empty video file";
+                    return;
+                }
+
+                // Create and trigger download
+                const downloadUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = "processed_video.mp4";  // Set desired filename
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(downloadUrl);
+
+                statusText.textContent = "Video processed and downloaded successfully!";
+            } catch (error) {
+                statusText.textContent = "Error: " + error.message;
+                console.error('Fetch error:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>
